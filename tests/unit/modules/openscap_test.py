@@ -45,9 +45,10 @@ class OpenscapTestCase(TestCase):
            )
        )
     )
-    def test_openscap_xccdf_eval_success(self):
+    def test_openscap_xccdf_eval_success_with_push(self):
         response = openscap.xccdf(
-            'eval --profile Default {0}'.format(self.policy_file))
+            'eval --profile Default {0}'.format(self.policy_file),
+            push=True)
 
         self.assertEqual(openscap.tempfile.mkdtemp.call_count, 1)
         expected_cmd = [
@@ -82,13 +83,53 @@ class OpenscapTestCase(TestCase):
        'salt.modules.openscap.Popen',
        MagicMock(
            return_value=Mock(
+               **{'returncode': 0, 'communicate.return_value': ('', '')}
+           )
+       )
+    )
+    def test_openscap_xccdf_eval_success_without_push(self):
+        response = openscap.xccdf(
+            'eval --profile Default {0}'.format(self.policy_file))
+
+        self.assertEqual(openscap.tempfile.mkdtemp.call_count, 1)
+        expected_cmd = [
+            'oscap',
+            'xccdf',
+            'eval',
+            '--oval-results',
+            '--results', 'results.xml',
+            '--report', 'report.html',
+            '--profile', 'Default',
+            self.policy_file
+        ]
+        openscap.Popen.assert_called_once_with(
+            expected_cmd,
+            cwd=openscap.tempfile.mkdtemp.return_value,
+            stderr=PIPE,
+            stdout=PIPE)
+        assert openscap.Caller().cmd.call_count == 0
+        self.assertEqual(openscap.shutil.rmtree.call_count, 1)
+        self.assertEqual(
+            response,
+            {
+                'upload_dir': self.random_temp_dir,
+                'error': '',
+                'success': True,
+                'returncode': 0
+            }
+        )
+
+    @patch(
+       'salt.modules.openscap.Popen',
+       MagicMock(
+           return_value=Mock(
                **{'returncode': 2, 'communicate.return_value': ('', 'some error')}
            )
        )
     )
     def test_openscap_xccdf_eval_success_with_failing_rules(self):
         response = openscap.xccdf(
-            'eval --profile Default {0}'.format(self.policy_file))
+            'eval --profile Default {0}'.format(self.policy_file), push=True)
 
         self.assertEqual(openscap.tempfile.mkdtemp.call_count, 1)
         expected_cmd = [

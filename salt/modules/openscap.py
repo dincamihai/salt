@@ -56,7 +56,7 @@ _OSCAP_EXIT_CODES_MAP = {
 }
 
 
-def xccdf(params):
+def xccdf(params, push=False):
     '''
     Run ``oscap xccdf`` commands on minions.
     It uses cp.push_dir to upload the generated files to the salt master
@@ -98,7 +98,8 @@ def xccdf(params):
         returncode = proc.returncode
         if oscap_success:
             caller = Caller()
-            caller.cmd('cp.push_dir', tempdir)
+            if push:
+                caller.cmd('cp.push_dir', tempdir)
             shutil.rmtree(tempdir, ignore_errors=True)
             upload_dir = tempdir
 
