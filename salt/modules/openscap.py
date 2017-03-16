@@ -74,7 +74,7 @@ def xccdf(params):
     params = shlex.split(params)
     policy = params[-1]
 
-    success = True
+    parser_success = True
     error = None
     upload_dir = None
     action = None
@@ -85,25 +85,25 @@ def xccdf(params):
         action = parser.parse_known_args(params)[0].action
         args, argv = _ArgumentParser(action=action).parse_known_args(args=params)
     except Exception as err:
-        success = False
+        parser_success = False
         error = str(err)
 
-    if success:
+    if parser_success:
         cmd = _XCCDF_MAP[action]['cmd_pattern'].format(args.profile, policy)
         tempdir = tempfile.mkdtemp()
         proc = Popen(
             shlex.split(cmd), stdout=PIPE, stderr=PIPE, cwd=tempdir)
         (stdoutdata, error) = proc.communicate()
-        success = _OSCAP_EXIT_CODES_MAP[proc.returncode]
+        oscap_success = _OSCAP_EXIT_CODES_MAP[proc.returncode]
         returncode = proc.returncode
-        if success:
+        if oscap_success:
             caller = Caller()
             caller.cmd('cp.push_dir', tempdir)
             shutil.rmtree(tempdir, ignore_errors=True)
             upload_dir = tempdir
 
     return dict(
-        success=success,
+        success=parser_success and oscap_success,
         upload_dir=upload_dir,
         error=error,
         returncode=returncode)
