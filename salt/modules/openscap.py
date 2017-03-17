@@ -59,8 +59,8 @@ _OSCAP_EXIT_CODES_MAP = {
 def xccdf(params, push=False):
     '''
     Run ``oscap xccdf`` commands on minions.
-    It uses cp.push_dir to upload the generated files to the salt master
-    in the master's minion files cachedir
+    If push=True is passed, it uses cp.push_dir to upload the generated files
+    to the salt master, in the master's minion files cachedir
     (defaults to ``/var/cache/salt/master/minions/minion-id/files``)
 
     It needs ``file_recv`` set to ``True`` in the master configuration file.
