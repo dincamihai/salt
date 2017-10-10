@@ -35,18 +35,14 @@
 %bcond_without docs
 %bcond_with    builddocs
 
-%define SALT_VERSION_YEAR       2017
-%define SALT_VERSION_MONTH      7
-%define SALT_VERSION_BUGFIX     1
-
 Name:           salt
-Version:        %{SALT_VERSION_YEAR}.%{SALT_VERSION_MONTH}.%{SALT_VERSION_BUGFIX}
+Version:        1.1
 Release:        0
 Summary:        A parallel remote execution system
 License:        Apache-2.0
 Group:          System/Management
 Url:            http://saltstack.org/
-Source:         https://github.com/saltstack/salt/archive/v%{SALT_VERSION_YEAR}.%{SALT_VERSION_MONTH}.%{SALT_VERSION_BUGFIX}.tar.gz
+Source0:        %{name}-%{version}.tar.gz
 Source1:        README.SUSE
 Source2:        salt-tmpfiles.d
 Source3:        html.tar.bz2
@@ -405,17 +401,6 @@ cp %{S:5} ./.travis.yml
 %patch2 -p1
 
 %build
-## Since 2017.7.0 we use the version tag tarball as source which doesn't contain
-## the '.git' information needed for Salt version calculation during setup.py run.
-##
-## Fixing the right version reported by Salt (bsc#1061407)
-cat > ./salt/_version.py << EOF
-# This file was auto-generated during Salt package building on openSUSE Build Service.
-
-from salt.version import SaltStackVersion
-
-__saltstack_version__ = SaltStackVersion(%{SALT_VERSION_YEAR}, %{SALT_VERSION_MONTH}, %{SALT_VERSION_BUGFIX}, 0, '', 0, 0, None)
-EOF
 
 %{__python} setup.py --salt-transport=both build
 
