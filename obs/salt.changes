@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Wed Oct  16 12:11:44 UTC 2017 - pablo.suarezhernandez@suse.com
+
+- Bugfix bsc#...
+- Added:
+ * Bugfix-always-return-a-string-list-on-unknown-job-ta.patch
+
+-------------------------------------------------------------------
 Wed Oct  4 16:11:44 UTC 2017 - pablo.suarezhernandez@suse.com
 
 - Remove 'TasksTask' attribute from salt-master.service in older

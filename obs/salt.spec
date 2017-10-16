@@ -57,6 +57,7 @@ Source5:        travis.yml
 Patch1:        list_pkgs-add-parameter-for-returned-attribute-selec.patch
 # PATCH-FIX_UPSTREAM https://github.com/saltstack/salt/pull/43441
 Patch2:         use-home-to-get-the-user-home-directory-instead-usin.patch
+Patch3:         Bugfix-always-return-a-string-list-on-unknown-job-ta.patch
 
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 BuildRequires:  logrotate
@@ -399,6 +400,7 @@ cp %{S:5} ./.travis.yml
 
 %patch1 -p1
 %patch2 -p1
+%patch3 -p1
 
 %build
 
