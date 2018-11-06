@@ -547,6 +547,8 @@ class LocalClient(object):
             {'dave': {...}}
             {'stewart': {...}}
         '''
+        from salt.master import mylogger
+        mylogger.info('running')
         # Late import - not used anywhere else in this file
         import salt.cli.batch
         opts = salt.cli.batch._batch_get_opts(
@@ -1679,7 +1681,7 @@ class LocalClient(object):
         #   module
 
         # Generate the standard keyword args to feed to format_payload
-        payload_kwargs = {'cmd': 'publish',
+        payload_kwargs = {'cmd': kwargs.get('cmd', 'publish'),
                           'tgt': tgt,
                           'fun': fun,
                           'arg': arg,
@@ -1775,7 +1777,6 @@ class LocalClient(object):
             # If not, we won't get a response, so error out
             if listen and not self.event.connect_pub(timeout=timeout):
                 raise SaltReqTimeoutError()
-            # import epdb; epdb.serve(port=4444)
             payload = channel.send(payload_kwargs, timeout=timeout)
         except SaltReqTimeoutError:
             raise SaltReqTimeoutError(

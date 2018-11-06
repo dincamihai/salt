@@ -93,6 +93,12 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+fh = logging.FileHandler('/tmp/log.log')
+formatter = logging.Formatter('%(asctime)s - %(module)s.%(funcName)s - %(message)s')
+fh.setFormatter(formatter)
+mylogger = logging.getLogger('loglog')
+mylogger.addHandler(fh)
+
 
 class SMaster(object):
     '''
@@ -1976,6 +1982,23 @@ class ClearFuncs(object):
         if 'token' not in clear_load:
             return False
         return self.loadauth.get_tok(clear_load['token'])
+
+    @tornado.gen.coroutine
+    def _do_batching(self, clear_load):
+        loops = 10
+        for idx in range(loops):
+            mylogger.info('sleeping loop %s' % idx)
+            yield tornado.concurrent.Future()
+            ret = {'enc': 'clear', 'load': {'jid': '', 'minions': [], 'missing': []}}
+            import rpdb; rpdb.set_trace(port=4444)
+            tornado.gen.sleep(10)
+        raise tornado.gen.Return(ret)
+
+    def publish_batch(self, clear_load):
+        mylogger.info('running')
+        self.event.io_loop.add_callback(self._do_batching, 10)
+        mylogger.info('done')
+        return {'enc': 'clear', 'load': {'jid': '', 'minions': [], 'missing': []}}
 
     def publish(self, clear_load):
         '''
