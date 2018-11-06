@@ -1988,11 +1988,22 @@ class ClearFuncs(object):
         loops = 10
         for idx in range(loops):
             mylogger.info('sleeping loop %s' % idx)
-            yield tornado.concurrent.Future()
-            ret = {'enc': 'clear', 'load': {'jid': '', 'minions': [], 'missing': []}}
-            import rpdb; rpdb.set_trace(port=4444)
-            tornado.gen.sleep(10)
-        raise tornado.gen.Return(ret)
+            ret = {
+                'enc': 'clear',
+                'load': {
+                    'jid': '',
+                    'minions': [],
+                    'missing': []
+                }
+            }
+            future = tornado.gen.sleep(1)
+            def _callback(ret, future):
+                mylogger.info('callback')
+                future.set_result(ret)
+            from functools import partial
+            future.add_done_callback(partial(_callback, ret))
+            yield future
+        mylogger.info('done')
 
     def publish_batch(self, clear_load):
         mylogger.info('running')
