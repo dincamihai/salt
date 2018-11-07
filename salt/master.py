@@ -1984,32 +1984,27 @@ class ClearFuncs(object):
         return self.loadauth.get_tok(clear_load['token'])
 
     @tornado.gen.coroutine
-    def _do_batching(self, clear_load):
-        loops = 10
-        for idx in range(loops):
-            mylogger.info('sleeping loop %s' % idx)
-            ret = {
-                'enc': 'clear',
-                'load': {
-                    'jid': '',
-                    'minions': [],
-                    'missing': []
-                }
-            }
-            future = tornado.gen.sleep(1)
-            def _callback(ret, future):
-                mylogger.info('callback')
-                future.set_result(ret)
-            from functools import partial
-            future.add_done_callback(partial(_callback, ret))
-            yield future
+    def _gen_batches(self, clear_load):
+        mylogger.info('running')
+        yield tornado.gen.sleep(10)
         mylogger.info('done')
 
-    def publish_batch(self, clear_load):
+    @tornado.gen.coroutine
+    def _do_batching(self, clear_load):
         mylogger.info('running')
-        self.event.io_loop.add_callback(self._do_batching, 10)
+        ioloop = tornado.ioloop.IOLoop.current()
+        ioloop.add_callback(self._gen_batches, clear_load)
         mylogger.info('done')
-        return {'enc': 'clear', 'load': {'jid': '', 'minions': [], 'missing': []}}
+        extra = clear_load.get('kwargs', {})
+        jid = self._prep_jid(clear_load, extra)
+        raise tornado.gen.Return({
+            'enc': 'clear',
+            'load': {
+                'jid': jid,
+                'minions': [],
+                'missing': []
+            }
+        })
 
     def publish(self, clear_load):
         '''

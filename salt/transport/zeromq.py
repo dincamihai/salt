@@ -688,6 +688,8 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin,
             raise tornado.gen.Return()
 
         req_fun = req_opts.get('fun', 'send')
+        if isinstance(ret, tornado.concurrent.Future) and ret.done():
+            ret = ret.result()
         if req_fun == 'send_clear':
             stream.send(self.serial.dumps(ret))
         elif req_fun == 'send':
