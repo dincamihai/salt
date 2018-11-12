@@ -518,6 +518,7 @@ class LocalClient(object):
                 progress=progress,
                 **kwargs)
 
+    @tornado.gen.coroutine
     def cmd_batch(
             self,
             tgt,
@@ -556,7 +557,7 @@ class LocalClient(object):
             arg=arg, tgt_type=tgt_type, ret=ret, kwarg=kwarg, batch=batch,
             **kwargs)
 
-        eauth = salt.cli.batch._batch_get_eauth(opts, kwargs)
+        eauth = salt.cli.batch._batch_get_eauth(kwargs)
 
         batch = salt.cli.batch.Batch(opts, eauth=eauth, quiet=True)
         for ret in batch.run():

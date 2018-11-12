@@ -15,6 +15,7 @@ import salt.utils.stringutils
 import salt.client
 import salt.output
 import salt.exceptions
+import tornado.gen
 
 # Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
@@ -24,6 +25,26 @@ from salt.ext.six.moves import range
 import logging
 
 log = logging.getLogger(__name__)
+
+
+def _get_bnum(opts, minions, quiet):
+    '''
+    Return the active number of minions to maintain
+    '''
+    partition = lambda x: float(x) / 100.0 * len(minions)
+    try:
+        if '%' in opts['batch']:
+            res = partition(float(opts['batch'].strip('%')))
+            if res < 1:
+                return int(math.ceil(res))
+            else:
+                return int(res)
+        else:
+            return int(opts['batch'])
+    except ValueError:
+        if not quiet:
+            salt.utils.stringutils.print_cli('Invalid batch data sent: {0}\nData must be in the '
+                      'form of %10, 10% or 3'.format(opts['batch']))
 
 
 def _batch_get_opts(
@@ -66,7 +87,7 @@ def _batch_get_opts(
     return opts
 
 
-def _batch_get_eauth(opts, kwargs):
+def _batch_get_eauth(kwargs):
     eauth = {}
     if 'eauth' in kwargs:
         eauth['eauth'] = kwargs.pop('eauth')
@@ -132,25 +153,6 @@ class Batch(object):
                     fret.add(m)
         return (list(fret), ping_gen, nret.difference(fret))
 
-    def get_bnum(self):
-        '''
-        Return the active number of minions to maintain
-        '''
-        partition = lambda x: float(x) / 100.0 * len(self.minions)
-        try:
-            if '%' in self.opts['batch']:
-                res = partition(float(self.opts['batch'].strip('%')))
-                if res < 1:
-                    return int(math.ceil(res))
-                else:
-                    return int(res)
-            else:
-                return int(self.opts['batch'])
-        except ValueError:
-            if not self.quiet:
-                salt.utils.stringutils.print_cli('Invalid batch data sent: {0}\nData must be in the '
-                          'form of %10, 10% or 3'.format(self.opts['batch']))
-
     def __update_wait(self, wait):
         now = datetime.now()
         i = 0
@@ -163,13 +165,15 @@ class Batch(object):
         '''
         Execute the batch run
         '''
+        from salt.master import mylogger
+        mylogger.info('running')
         args = [[],
                 self.opts['fun'],
                 self.opts['arg'],
                 self.opts['timeout'],
                 'list',
                 ]
-        bnum = self.get_bnum()
+        bnum = _get_bnum(self.opts, self.minions, self.quiet)
         # No targets to run
         if not self.minions:
             return

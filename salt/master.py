@@ -1551,6 +1551,7 @@ class AESFuncs(object):
 
         :param dict load: The minion payload
         '''
+        mylogger.debug("{jid} {id} {fun}".format(**load))
         if self.opts['require_minion_sign_messages'] and 'sig' not in load:
             log.critical(
                 '_return: Master is requiring minions to sign their '
@@ -1984,25 +1985,91 @@ class ClearFuncs(object):
         return self.loadauth.get_tok(clear_load['token'])
 
     @tornado.gen.coroutine
-    def _gen_batches(self, clear_load):
+    def _wait_return(self, jid, seconds=5):
+        mylogger.info('-')
+        for i in range(seconds):
+            mylogger.info('sleeping for %d' %(seconds - i))
+            time.sleep(1)
+
+    @tornado.gen.coroutine
+    def _publish_and_wait(self, clear_load, minions, eauth, jid):
+        payload_kwargs = self.local._prep_pub(
+            minions,
+            clear_load['fun'],
+            clear_load['arg'],
+            'list',
+            clear_load['ret'],
+            clear_load['jid'],
+            timeout=self.local._get_timeout(clear_load.get('timeout')),
+            **clear_load['kwargs'])
+        # ret = self.local.cmd_iter(payload_kwargs)
+
+        self.local.cmd(
+            minions,
+            clear_load['fun'],
+            clear_load['arg'],
+            raw=self.opts.get('raw', False),
+            ret=self.opts.get('return', ''),
+            tgt_type='list',
+            parent_jid=jid,
+            show_jid=False,
+            verbose=False,
+            timeout=self.local._get_timeout(clear_load.get('timeout')),
+            gather_job_timeout=self.opts['gather_job_timeout'],
+            **eauth)
+
+    @tornado.gen.coroutine
+    def _gen_batches(self, clear_load, minions, jid):
         mylogger.info('running')
-        yield tornado.gen.sleep(10)
+
+        # Late import - not used anywhere else in this file
+        import salt.cli.batch
+        opts = salt.cli.batch._batch_get_opts(
+            clear_load['tgt'],
+            clear_load['fun'],
+            self.opts,
+            arg=clear_load['arg'],
+            tgt_type=clear_load['tgt_type'],
+            ret=clear_load['ret'],
+            kwarg=clear_load.get('kwarg', None),
+            **clear_load['kwargs']
+        )
+        eauth = salt.cli.batch._batch_get_eauth(clear_load['kwargs'])
+
+        ioloop = tornado.ioloop.IOLoop.current()
+        batch = salt.cli.batch._get_bnum(opts, minions, True)
+        for start in xrange(0, len(minions), batch):
+            end = min(start + batch, len(minions))
+            ioloop.spawn_callback(
+                self._publish_and_wait,
+                clear_load, minions[start:end], eauth, jid)
         mylogger.info('done')
+
+    @tornado.gen.coroutine
+    def _check_minions(self, clear_load):
+        mylogger.info('running')
+        delimiter = clear_load.get('kwargs', {}).get('delimiter', DEFAULT_TARGET_DELIM)
+        _res = self.ckminions.check_minions(
+            clear_load['tgt'],
+            clear_load.get('tgt_type', 'glob'),
+            delimiter)
+        raise tornado.gen.Return(
+            [_res.get('minions', list()), _res.get('missing', list())])
 
     @tornado.gen.coroutine
     def _do_batching(self, clear_load):
         mylogger.info('running')
-        ioloop = tornado.ioloop.IOLoop.current()
-        ioloop.add_callback(self._gen_batches, clear_load)
-        mylogger.info('done')
+        minions, missing = yield self._check_minions(clear_load)
         extra = clear_load.get('kwargs', {})
         jid = self._prep_jid(clear_load, extra)
+        ioloop = tornado.ioloop.IOLoop.current()
+        ioloop.add_callback(self._gen_batches, clear_load, minions, jid)
         raise tornado.gen.Return({
             'enc': 'clear',
             'load': {
                 'jid': jid,
-                'minions': [],
-                'missing': []
+                'minions': minions,
+                'missing': missing
             }
         })
 
@@ -2100,6 +2167,7 @@ class ClearFuncs(object):
             return {'enc': 'clear',
                     'load': {'error': 'Master failed to assign jid'}}
         payload = self._prep_pub(minions, jid, clear_load, extra, missing)
+        mylogger.debug("{jid} {fun} {tgt} {arg}".format(**payload))
 
         # Send it!
         self._send_ssh_pub(payload, ssh_minions=ssh_minions)
