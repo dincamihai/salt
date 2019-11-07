@@ -923,7 +923,7 @@ def _get_repo_info(alias, repos_cfg=None):
     Get one repo meta-data.
     '''
     try:
-        meta = dict((repos_cfg or _get_configured_repos()).items(alias))
+        meta = dict((repos_cfg or _get_configured_repos()).items(alias, raw=True))
         meta['alias'] = alias
         for key, val in six.iteritems(meta):
             if val in ['0', '1']:
